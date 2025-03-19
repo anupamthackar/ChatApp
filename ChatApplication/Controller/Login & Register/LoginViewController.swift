@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class LoginViewController: UIViewController {
 	// MARK: - Properties
@@ -63,8 +64,8 @@ class LoginViewController: UIViewController {
 		button.titleLabel?.font = .systemFont(ofSize: 20, weight: .bold)
 		return button
 	}()
-    override func viewDidLoad() {
-        super.viewDidLoad()
+	override func viewDidLoad() {
+		super.viewDidLoad()
 		view.backgroundColor = .white
 		
 		navigationItem.title = "Log In"
@@ -90,7 +91,7 @@ class LoginViewController: UIViewController {
 		scrollView.addSubview(emailField)
 		scrollView.addSubview(passwordField)
 		scrollView.addSubview(loginButton)
-    }
+	}
 	
 	override func viewDidLayoutSubviews() {
 		super.viewDidLayoutSubviews()
@@ -110,9 +111,9 @@ class LoginViewController: UIViewController {
 									 width: scrollView.width - 60,
 									 height: 52)
 		loginButton.frame = CGRect(x: 30,
-									 y: passwordField.bottom + 10,
-									 width: scrollView.width - 60,
-									 height: 52)
+								   y: passwordField.bottom + 10,
+								   width: scrollView.width - 60,
+								   height: 52)
 	}
 }
 
@@ -135,6 +136,20 @@ extension LoginViewController {
 			return
 		}
 		// TODO: - Firebase log in
+		FirebaseAuth.Auth
+			.auth()
+			.signIn(withEmail: email, password: password, completion: { [weak self] authData, error in
+				guard let strongSelf = self else { return }
+				guard let result = authData, error == nil else {
+					print("Failed to log in user with email: \(email)")
+					strongSelf.showAlert(alertText: "Failed", alertMessage: "Failed to log in user with email: \(email)")
+					return
+				}
+				let user = result.user
+				print("Logged in User: \(user)")
+				strongSelf.showAlert(alertText: "Successful", alertMessage: "Logged in User: \(user)")
+				strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+			})
 		
 	}
 	
