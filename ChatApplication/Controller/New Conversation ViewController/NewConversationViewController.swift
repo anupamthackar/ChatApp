@@ -41,13 +41,9 @@ class NewConversationViewController: UIViewController {
 	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		view.addSubview(noResultsLabel)
-		view.addSubview(tableView)
+		addSubviewView()
 		
-		searchBar.delegate = self
-		
-		tableView.delegate = self
-		tableView.dataSource = self
+		delegateCall()
 		
 		view.backgroundColor = .white
 		navigationController?.navigationBar.topItem?.titleView = searchBar
@@ -67,15 +63,11 @@ class NewConversationViewController: UIViewController {
 	
 	override func viewDidLayoutSubviews() {
 		super.viewDidLayoutSubviews()
-		tableView.frame = view.bounds
-		noResultsLabel.frame = CGRect(
-			x: view.width/4,
-			y: (view.height-200)/2,
-			width: CGFloat(Int(view.width)/2),
-			height: 100
-		)
+		viewLayoutSubview()
 	}
 }
+
+// MARK: - Table View Delegate
 
 extension NewConversationViewController: UITableViewDelegate, UITableViewDataSource {
 	func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -96,6 +88,8 @@ extension NewConversationViewController: UITableViewDelegate, UITableViewDataSou
 		})
 	}
 }
+
+// MARK: - Search Bar Delegate
 
 extension NewConversationViewController: UISearchBarDelegate {
 	func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
@@ -156,5 +150,30 @@ extension NewConversationViewController: UISearchBarDelegate {
 			self.tableView.isHidden = false
 			self.tableView.reloadData()
 		}
+	}
+}
+
+// MARK: - Utility
+
+extension NewConversationViewController {
+	private func delegateCall() {
+		searchBar.delegate = self
+		tableView.delegate = self
+		tableView.dataSource = self
+	}
+	
+	private func addSubviewView() {
+		view.addSubview(noResultsLabel)
+		view.addSubview(tableView)
+	}
+	
+	private func viewLayoutSubview() {
+		tableView.frame = view.bounds
+		noResultsLabel.frame = CGRect(
+			x: view.width/4,
+			y: (view.height-200)/2,
+			width: CGFloat(Int(view.width)/2),
+			height: 100
+		)
 	}
 }

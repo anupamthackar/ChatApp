@@ -10,7 +10,9 @@ import FirebaseAuth
 import JGProgressHUD
 
 class LoginViewController: UIViewController {
+	
 	// MARK: - Properties
+	
 	private let spinner = JGProgressHUD(style: .dark)
 	
 	private let imageView: UIImageView = {
@@ -67,34 +69,18 @@ class LoginViewController: UIViewController {
 		button.titleLabel?.font = .systemFont(ofSize: 20, weight: .bold)
 		return button
 	}()
+	
+	//MARK: - Life Cycle
+	
 	override func viewDidLoad() {
 		super.viewDidLoad()
-		view.backgroundColor = .white
-		
-		navigationItem.title = "Log In"
-		navigationItem.rightBarButtonItem = UIBarButtonItem(
-			title: "Register",
-			style: .done,
-			target: self,
-			action: #selector(didTapRegister)
-		)
-		// Assign delegates
-		loginButton
-			.addTarget(
-				self,
-				action: #selector(loginButtonTapped),
-				for: .touchUpInside
-			)
-		emailField.delegate = self
-		passwordField.delegate = self
-		
-		// Add subviews
-		view.addSubview(scrollView)
-		scrollView.addSubview(imageView)
-		scrollView.addSubview(emailField)
-		scrollView.addSubview(passwordField)
-		scrollView.addSubview(loginButton)
+		navigationBarUI()
+		loginAction()
+		delegateCall()
+		addSubviewView()
 	}
+	
+	// MARK: - UI Update
 	
 	override func viewDidLayoutSubviews() {
 		super.viewDidLayoutSubviews()
@@ -121,12 +107,20 @@ class LoginViewController: UIViewController {
 }
 
 extension LoginViewController {
+	
 	// MARK: - Actions
+	
 	@objc private func didTapRegister() {
 		let registerViewController = RegisterViewController()
 		registerViewController.title = "Create Account"
 		navigationController?
 			.pushViewController(registerViewController, animated: true)
+	}
+	
+	private func loginAction() {
+		loginButton.addTarget(self,
+							  action: #selector(loginButtonTapped),
+							  for: .touchUpInside)
 	}
 	
 	@objc private func loginButtonTapped() {
@@ -141,26 +135,45 @@ extension LoginViewController {
 		
 		spinner.show(in: view)
 		
-		FirebaseAuth.Auth
-			.auth()
-			.signIn(withEmail: email, password: password, completion: { [weak self] authData, error in
-				guard let strongSelf = self else { return }
-				
-				DispatchQueue.main.async {
-					strongSelf.spinner.dismiss()
+		FirebaseAuth.Auth.auth().signIn(withEmail: email, password: password, completion: { [weak self] authData, error in
+			guard let strongSelf = self else { return }
+			
+			DispatchQueue.main.async {
+				strongSelf.spinner.dismiss()
+			}
+			
+			guard let result = authData, error == nil else {
+				print("Failed to log in user with email: \(email)")
+				strongSelf.showAlert(alertText: "Failed", alertMessage: "Failed to log in user with email: \(email)")
+				return
+			}
+			
+			let user = result.user
+			
+			let safeEmail = DatabaseManager.safeEmail(emailAddress: email)
+			
+			DatabaseManager.shared.getDataFor(path: safeEmail, completion: { [weak self] result in
+				switch result {
+				case .success(let data):
+					guard let userData = data as? [String: Any],
+						  let firstName = userData["first_name"] as? String,
+						  let lastName = userData["last_name"] as? String else {
+						
+						return
+					}
+					
+					UserDefaults.standard.set("\(firstName) \(lastName)", forKey: "name")
+				case .failure(let error):
+					print("Failed to read data with error \(error)")
 				}
-				
-				guard let result = authData, error == nil else {
-					print("Failed to log in user with email: \(email)")
-					strongSelf.showAlert(alertText: "Failed", alertMessage: "Failed to log in user with email: \(email)")
-					return
-				}
-				let user = result.user
-				UserDefaults.standard.set(email, forKey: "email")
-				print("Logged in User: \(user)")
-//				strongSelf.showAlert(alertText: "Successful", alertMessage: "Logged in User: \(user)")
-				strongSelf.navigationController?.dismiss(animated: true, completion: nil)
 			})
+			
+			UserDefaults.standard.set(email, forKey: "email")
+			
+			
+			print("Logged in User: \(user)")
+			strongSelf.navigationController?.dismiss(animated: true, completion: nil)
+		})
 		
 	}
 	
@@ -184,5 +197,33 @@ extension LoginViewController: UITextFieldDelegate {
 			loginButtonTapped()
 		}
 		return true
+	}
+}
+
+
+extension LoginViewController {
+	private func addSubviewView() {
+		view.addSubview(scrollView)
+		scrollView.addSubview(imageView)
+		scrollView.addSubview(emailField)
+		scrollView.addSubview(passwordField)
+		scrollView.addSubview(loginButton)
+	}
+	
+	private func delegateCall() {
+		emailField.delegate = self
+		passwordField.delegate = self
+	}
+	
+	private func navigationBarUI() {
+		view.backgroundColor = .white
+		navigationItem.title = "Log In"
+		navigationItem.rightBarButtonItem = UIBarButtonItem(
+			title: "Register",
+			style: .done,
+			target: self,
+			action: #selector(didTapRegister)
+		)
+		
 	}
 }

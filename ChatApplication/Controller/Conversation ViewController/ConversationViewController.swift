@@ -10,19 +10,6 @@ import FirebaseAuth
 import JGProgressHUD
 
 
-struct Conversation {
-	let id: String
-	let name: String
-	let otherUserEmail: String
-	let latestMessage: LatestMessage
-}
-
-struct LatestMessage {
-	let date: String
-	let text: String
-	let isRead: Bool
-}
-
 class ConversationViewController: UIViewController {
 	
 	private let spinner = JGProgressHUD(style: .dark)
@@ -63,15 +50,12 @@ class ConversationViewController: UIViewController {
 		super.viewDidAppear(animated)
 		validateAuth()
 	}
+	
 	private func startListeningForCOnversations() {
 		guard let email = UserDefaults.standard.value(forKey: "email") as? String else {
 			return
 		}
-
-//		if let observer = loginObserver {
-//			NotificationCenter.default.removeObserver(observer)
-//		}
-
+		
 		print("starting conversation fetch...")
 
 		let safeEmail = DatabaseManager.safeEmail(emailAddress: email)
@@ -81,12 +65,9 @@ class ConversationViewController: UIViewController {
 			case .success(let conversations):
 				print("successfully got conversation models")
 				guard !conversations.isEmpty else {
-//					self?.tableView.isHidden = true
-//					self?.noConversationsLabel.isHidden = false
 					return
 				}
-//				self?.noConversationsLabel.isHidden = true
-//				self?.tableView.isHidden = false
+				
 				self?.conversations = conversations
 
 				DispatchQueue.main.async {
@@ -95,8 +76,7 @@ class ConversationViewController: UIViewController {
 				}
 				
 			case .failure(let error):
-//				self?.tableView.isHidden = true
-//				self?.noConversationsLabel.isHidden = false
+				
 				print("failed to get convos: \(error)")
 			}
 		})

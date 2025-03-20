@@ -9,17 +9,22 @@ import UIKit
 import FirebaseAuth
 
 class ProfileViewController: UIViewController {
-
+	
+	// MARK: - Properties
+	
 	@IBOutlet weak var tableView: UITableView!
 	
 	let data = ["Logout"]
+	
+	// MARK: - Life Cycle
+	
     override func viewDidLoad() {
         super.viewDidLoad()
-		tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
-		tableView.dataSource = self
-		tableView.delegate = self
+		tableViewConfiguration()
     }
 }
+
+// MARK: - Table View Delegate
 
 extension ProfileViewController: UITableViewDataSource, UITableViewDelegate  {
 	func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -70,3 +75,12 @@ extension ProfileViewController: UITableViewDataSource, UITableViewDelegate  {
 	}
 }
 
+// MARK: - Utility
+
+extension ProfileViewController {
+	private func tableViewConfiguration() {
+		tableView.register(UITableViewCell.self, forCellReuseIdentifier: "cell")
+		tableView.dataSource = self
+		tableView.delegate = self
+	}
+}

@@ -9,51 +9,10 @@ import UIKit
 import MessageKit
 import InputBarAccessoryView
 
-
-struct Message: MessageType {
-	public var sender: SenderType
-	public var messageId: String
-	public var sentDate: Date
-	public var kind: MessageKind
-}
-
-extension MessageKind {
-	var messageKindString: String {
-		switch self {
-		case .text(_):
-			return "text"
-		case .attributedText(_):
-			return "attributed_text"
-		case .photo(_):
-			return "photo"
-		case .video(_):
-			return "video"
-		case .location(_):
-			return "location"
-		case .emoji(_):
-			return "emoji"
-		case .audio(_):
-			return "audio"
-		case .contact(_):
-			return "contact"
-		case .custom(_):
-			return "customc"
-		case .linkPreview(_):
-			return "link"
-		}
-	}
-}
-
-struct Sender: SenderType {
-	public var photoURL: String
-	public var senderId: String
-	public var displayName: String
-
-}
-
 class ChatViewController: MessagesViewController {
 	
 	//MARK: - Properties
+	
 	public static let dateFormatter: DateFormatter = {
 		let formatter = DateFormatter()
 		formatter.dateStyle = .medium
@@ -86,42 +45,48 @@ class ChatViewController: MessagesViewController {
 		self.conversationId = id 
 		self.otherUserEmail = email
 		super.init(nibName: nil, bundle: nil)
-		if let conversationId = conversationId{
-			listenForMessages(id: conversationId)
-		}
+
 	}
 
 	required init?(coder: NSCoder) {
 			fatalError("init(coder:) has not been implemented")
 		}
 	
+	//MARK: - Life Cycle
+	
     override func viewDidLoad() {
         super.viewDidLoad()
 		
-		view.backgroundColor = .red
-		
-		messagesCollectionView.messagesDataSource = self
-		messagesCollectionView.messagesLayoutDelegate = self
-		messagesCollectionView.messagesDisplayDelegate = self
-		messageInputBar.delegate = self
-        
+		// Delegate Call
+		delegateCall()
     }
+	
 	override func viewDidAppear(_ animated: Bool) {
 		super.viewDidAppear(animated)
 		messageInputBar.inputTextView.becomeFirstResponder()
+		
+		if let conversationId = conversationId{
+			listenForMessages(id: conversationId, shouldScrollTobottom: true)
+		}
 	}
 	
-	private func listenForMessages(id: String) {
+	private func listenForMessages(id: String, shouldScrollTobottom: Bool) {
 		DatabaseManager.shared.getAllMessagesForConversation(with: id, completion: { [weak self] result in
 			switch result {
 			case .success(let messages):
+				print("success in getting messages \(messages)")
 				guard !messages.isEmpty else {
+					print("messages are empty")
 					return
 				}
 				self?.messages = messages
 				
 				DispatchQueue.main.async {
 					self?.messagesCollectionView.reloadDataAndKeepOffset()
+					
+					if shouldScrollTobottom {
+						self?.messagesCollectionView.scrollToLastItem()
+					}
 				}
 			case .failure(let error):
 				print("failed to get messages: \(error)")
@@ -129,6 +94,8 @@ class ChatViewController: MessagesViewController {
 		})
 	}
 }
+
+// MARK: - Input Bar Delegate
 
 extension ChatViewController: InputBarAccessoryViewDelegate {
 	func inputBar(_ inputBar: InputBarAccessoryView,didPressSendButtonWith text: String) {
@@ -139,16 +106,18 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
 		}
 		print("Sending \(text)")
 		
+		let mmessage = Message(sender: selfSender,
+							   messageId: messageId,
+							   sentDate: Date(),
+							   kind: .text(text))
+		
 		//Send Message
 		if isNewConversation {
 			// create conversation in database
-			let mmessage = Message(sender: selfSender,
-								  messageId: messageId,
-								  sentDate: Date(),
-								  kind: .text(text))
-			DatabaseManager.shared.createNewConversation(with: otherUserEmail, name: self.title ?? "User" , firstMessage: mmessage, completion: { success in
+			DatabaseManager.shared.createNewConversation(with: otherUserEmail, name: self.title ?? "User" , firstMessage: mmessage, completion: { [weak self] success in
 				if success {
 					print("message sent")
+					self?.isNewConversation = false
 				}
 				else {
 					print("message failed")
@@ -157,8 +126,26 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
 			
 		} else {
 			// append to existing conversation data
+			guard let conversationId = conversationId, let name = self.title else {
+				return
+			}
+			// append to existing conversation data
+			DatabaseManager.shared.sendMessage(to: conversationId,
+											   otherUserEmail: otherUserEmail,
+											   name: name,
+											   newMessage: mmessage,
+											   completion: { success in
+				if success {
+					print("message sent")
+				}
+				else {
+					print("failed to send")
+				}
+				
+			})
 		}
 	}
+	
 	
 	private func createMessageId() -> String? {
 		// Date, otheruserEmail, senderEmail, randomInt
@@ -175,6 +162,8 @@ extension ChatViewController: InputBarAccessoryViewDelegate {
 		return newIdentifier
 	}
 }
+
+//MARK: - MessageKit Delegate
 
 extension ChatViewController: MessagesDataSource, MessagesLayoutDelegate, MessagesDisplayDelegate {
 	func currentSender() -> SenderType {
@@ -195,3 +184,13 @@ extension ChatViewController: MessagesDataSource, MessagesLayoutDelegate, Messag
 
 }
 
+// MARK: - Utility
+
+extension ChatViewController {
+	private func delegateCall() {
+		messagesCollectionView.messagesDataSource = self
+		messagesCollectionView.messagesLayoutDelegate = self
+		messagesCollectionView.messagesDisplayDelegate = self
+		messageInputBar.delegate = self
+	}
+}
