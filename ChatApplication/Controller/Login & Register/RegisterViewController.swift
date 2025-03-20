@@ -7,9 +7,12 @@
 
 import UIKit
 import FirebaseAuth
-
+import JGProgressHUD
 class RegisterViewController: UIViewController {
 	// MARK: - Properties
+	
+	private let spinner = JGProgressHUD(style: .dark)
+	
 	private let imageView: UIImageView = {
 		let imageView = UIImageView()
 		imageView.image = UIImage(systemName: "person.circle")
@@ -182,10 +185,16 @@ extension RegisterViewController {
 			alertUserLoginError()
 			return
 		}
+		spinner.show(in: view)
 		
 		// TODO: - Firebase log in
 		DatabaseManager.shared.userExists(with: email, completion: { [weak self] exists in
 			guard let strongSelf = self else { return }
+			
+			DispatchQueue.main.async {
+				strongSelf.spinner.dismiss()
+			}
+			
 			guard !exists else {
 				// user already exists
 				self?.alertUserLoginError(message: "Looks like a user account for that email address already exists.")
@@ -213,7 +222,7 @@ extension RegisterViewController {
 									firstName: first,
 									lastName: last,
 									emailAddress: email
-								)
+								), completion: { _ in }
 							)
 						
 						strongSelf.navigationController?.dismiss(animated: true, completion: nil)

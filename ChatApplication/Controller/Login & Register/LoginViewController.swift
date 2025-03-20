@@ -7,9 +7,12 @@
 
 import UIKit
 import FirebaseAuth
+import JGProgressHUD
 
 class LoginViewController: UIViewController {
 	// MARK: - Properties
+	private let spinner = JGProgressHUD(style: .dark)
+	
 	private let imageView: UIImageView = {
 		let imageView = UIImageView()
 		imageView.image = UIImage(named: "logo")
@@ -135,19 +138,27 @@ extension LoginViewController {
 			alertUserLoginError()
 			return
 		}
-		// TODO: - Firebase log in
+		
+		spinner.show(in: view)
+		
 		FirebaseAuth.Auth
 			.auth()
 			.signIn(withEmail: email, password: password, completion: { [weak self] authData, error in
 				guard let strongSelf = self else { return }
+				
+				DispatchQueue.main.async {
+					strongSelf.spinner.dismiss()
+				}
+				
 				guard let result = authData, error == nil else {
 					print("Failed to log in user with email: \(email)")
 					strongSelf.showAlert(alertText: "Failed", alertMessage: "Failed to log in user with email: \(email)")
 					return
 				}
 				let user = result.user
+				UserDefaults.standard.set(email, forKey: "email")
 				print("Logged in User: \(user)")
-				strongSelf.showAlert(alertText: "Successful", alertMessage: "Logged in User: \(user)")
+//				strongSelf.showAlert(alertText: "Successful", alertMessage: "Logged in User: \(user)")
 				strongSelf.navigationController?.dismiss(animated: true, completion: nil)
 			})
 		
